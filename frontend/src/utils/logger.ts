@@ -4,7 +4,7 @@
 // Centralized logging system for debugging and monitoring
 // In production, this would send logs to a service like LogRocket or Sentry
 
-import { LogEvent, AnalyticsEvent } from '../types';
+import { LogEvent, AnalyticsEvent } from '../types/types';
 
 class Logger {
   private isDevelopment = import.meta.env.DEV;
