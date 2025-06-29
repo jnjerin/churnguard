@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { DemoService } from '../types';
+import type { DemoService } from '../types/types';
 import { ChatWidget } from './ChatWidget';
 import { logger, trackEvent } from '../utils/logger';
 
