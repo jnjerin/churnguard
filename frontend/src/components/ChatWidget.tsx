@@ -2,6 +2,7 @@
 // CHURNGUARD CHAT WIDGET COMPONENT
 // ============================================================================
 // Main chat interface that handles the complete conversation flow
+'use client'
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,6 +11,7 @@ import { ChatMessage } from './ChatMessage';
 import { ConfirmationScreen } from './ConfirmationScreen';
 import type { CancellationReason } from '../types/types';
 import { logger } from '../utils/logger';
+
 
 interface ChatWidgetProps {
   userId: string;

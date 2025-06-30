@@ -63,6 +63,12 @@ export interface Conversation {
   retentionOffer?: RetentionOffer;
 }
 
+export interface ConversationOutcome {
+  outcome: 'accepted' | 'rejected' | 'abandoned';
+  reason?: string;
+  nextSteps?: string[];
+}
+
 // ============================================================================
 // CANCELLATION & RETENTION TYPES
 // ============================================================================

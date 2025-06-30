@@ -3,6 +3,7 @@
 // ============================================================================
 // Simulates a Netflix-like subscription page where users can cancel
 // This is the main entry point that triggers the ChurnGuard chat widget
+'use client'
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';

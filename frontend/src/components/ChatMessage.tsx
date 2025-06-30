@@ -2,6 +2,7 @@
 // CHURNGUARD CHAT MESSAGE COMPONENT
 // ============================================================================
 // Individual chat message bubble with proper styling and animations
+'use client'
 
 import React from 'react';
 import { motion } from 'framer-motion';

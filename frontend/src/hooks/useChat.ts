@@ -5,16 +5,16 @@
 // Handles the complete chat flow from initiation to completion
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { 
-  ChatState, 
-  ChatStep, 
-  Conversation, 
-  RetentionOffer, 
+import type {
+  ChatState,
+  // ChatStep,
+  Conversation,
+  // RetentionOffer,
   CancellationReason,
   InitiateChatRequest,
   SendMessageRequest,
   AcceptOfferRequest
-} from '../types';
+} from '../types/types';
 import { apiService } from '../services/api';
 import { logger, trackEvent } from '../utils/logger';
 

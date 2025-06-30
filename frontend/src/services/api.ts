@@ -4,259 +4,396 @@
 // Handles all communication with the backend Lambda functions
 // Includes proper error handling, retries, and logging
 
-import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
 import { 
-  InitiateChatRequest, 
-  InitiateChatResponse,
-  SendMessageRequest,
-  SendMessageResponse,
-  AcceptOfferRequest,
-  AcceptOfferResponse,
-  ApiResponse 
-} from '../types';
-import { logger } from '../utils/logger';
+  ChatMessage, 
+  RetentionOffer, 
+  CancellationReason, 
+  ConversationOutcome,
+  Conversation 
+} from '@/types/types';
+import { logger } from '@/utils/logger';
+
+// API Configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_TIMEOUT = 30000; // 30 seconds
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+interface StartConversationRequest {
+  userId: string;
+  subscriptionId: string;
+  reason: CancellationReason;
+  reasonText: string;
+}
+
+interface SendMessageRequest {
+  conversationId: string;
+  message: string;
+  userId: string;
+}
+
+interface OfferActionRequest {
+  conversationId: string;
+  offerId: string;
+  action: 'accept' | 'reject';
+  userId: string;
+}
 
 class ApiService {
-  private client: AxiosInstance;
   private baseURL: string;
 
   constructor() {
-    // In development, we'll use a mock API or local backend
-    // In production, this will be your deployed API Gateway URL
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-    
-    this.client = axios.create({
-      baseURL: this.baseURL,
-      timeout: 30000, // 30 seconds timeout
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    this.setupInterceptors();
-    
-    logger.info('API Service initialized', { baseURL: this.baseURL });
+    this.baseURL = API_BASE_URL;
   }
 
   /**
-   * Set up request and response interceptors for logging and error handling
+   * Generic fetch wrapper with error handling and timeout
    */
-  private setupInterceptors() {
-    // Request interceptor - log outgoing requests
-    this.client.interceptors.request.use(
-      (config) => {
-        const startTime = Date.now();
-        config.metadata = { startTime };
-        
-        logger.debug(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
-          data: config.data,
-          params: config.params
-        });
-        
-        return config;
-      },
-      (error) => {
-        logger.error('API Request Error', error);
-        return Promise.reject(error);
-      }
-    );
+  private async fetchWithTimeout<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-    // Response interceptor - log responses and handle errors
-    this.client.interceptors.response.use(
-      (response: AxiosResponse) => {
-        const duration = Date.now() - (response.config.metadata?.startTime || 0);
-        
-        logger.api(
-          response.config.method?.toUpperCase() || 'GET',
-          response.config.url || '',
-          response.status,
-          duration,
-          response.data
-        );
-        
-        return response;
-      },
-      (error: AxiosError) => {
-        const duration = Date.now() - (error.config?.metadata?.startTime || 0);
-        
-        logger.api(
-          error.config?.method?.toUpperCase() || 'GET',
-          error.config?.url || '',
-          error.response?.status || 0,
-          duration,
-          error.response?.data
-        );
-        
-        logger.error('API Response Error', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          url: error.config?.url
-        });
-        
-        return Promise.reject(this.handleApiError(error));
-      }
-    );
-  }
+    try {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
 
-  /**
-   * Handle and normalize API errors
-   */
-  private handleApiError(error: AxiosError): Error {
-    if (error.response) {
-      // Server responded with error status
-      const status = error.response.status;
-      const data = error.response.data as any;
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
       
-      switch (status) {
-        case 400:
-          return new Error(data?.message || 'Invalid request. Please check your input.');
-        case 401:
-          return new Error('Authentication required. Please refresh the page.');
-        case 403:
-          return new Error('Access denied. You don\'t have permission for this action.');
-        case 404:
-          return new Error('Service not found. Please try again later.');
-        case 429:
-          return new Error('Too many requests. Please wait a moment and try again.');
-        case 500:
-          return new Error('Server error. Our team has been notified.');
-        case 503:
-          return new Error('Service temporarily unavailable. Please try again in a few minutes.');
-        default:
-          return new Error(data?.message || `Request failed with status ${status}`);
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          logger.error('API request timeout', { endpoint, timeout: API_TIMEOUT });
+          return {
+            success: false,
+            error: 'Request timeout. Please try again.',
+          };
+        }
+        
+        logger.error('API request failed', { 
+          endpoint, 
+          error: error.message,
+          stack: error.stack 
+        });
+        
+        return {
+          success: false,
+          error: error.message,
+        };
       }
-    } else if (error.request) {
-      // Network error
-      return new Error('Network error. Please check your internet connection and try again.');
-    } else {
-      // Something else happened
-      return new Error(error.message || 'An unexpected error occurred.');
+
+      return {
+        success: false,
+        error: 'An unexpected error occurred',
+      };
     }
   }
 
   /**
-   * Initiate a new chat session when user wants to cancel
+   * Initiate a chat conversation (alias for startConversation)
    */
-  async initiateChat(request: InitiateChatRequest): Promise<InitiateChatResponse> {
-    try {
-      logger.chat('Initiating chat session', { 
-        userId: request.userId,
-        reason: request.cancellationReason 
-      });
-
-      const response = await this.client.post<ApiResponse<InitiateChatResponse>>(
-        '/chat/initiate',
-        request
-      );
-
-      if (!response.data.success) {
-        throw new Error(response.data.error?.message || 'Failed to initiate chat');
-      }
-
-      logger.chat('Chat session initiated successfully', {
-        conversationId: response.data.data?.conversationId
-      });
-
-      return response.data.data!;
-    } catch (error) {
-      logger.error('Failed to initiate chat', error, { userId: request.userId });
-      throw error;
-    }
+  async initiateChat(request: StartConversationRequest): Promise<ApiResponse<Conversation>> {
+    return this.startConversation(request);
   }
 
   /**
-   * Send a message in an active chat conversation
+   * Start a new conversation with cancellation reason
    */
-  async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
-    try {
-      logger.chat('Sending message', { 
-        conversationId: request.conversationId,
-        messageType: request.messageType 
-      });
+  async startConversation(request: StartConversationRequest): Promise<ApiResponse<Conversation>> {
+    logger.api('Starting conversation', request);
+    
+    return this.fetchWithTimeout<Conversation>('/conversations/start', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
 
-      const response = await this.client.post<ApiResponse<SendMessageResponse>>(
-        '/chat/message',
-        request
-      );
-
-      if (!response.data.success) {
-        throw new Error(response.data.error?.message || 'Failed to send message');
-      }
-
-      logger.chat('Message sent successfully', {
-        conversationId: request.conversationId,
-        hasOffer: !!response.data.data?.retentionOffer
-      });
-
-      return response.data.data!;
-    } catch (error) {
-      logger.error('Failed to send message', error, { 
-        conversationId: request.conversationId 
-      });
-      throw error;
-    }
+  /**
+   * Send a message in an existing conversation
+   */
+  async sendMessage(request: SendMessageRequest): Promise<ApiResponse<{ message: ChatMessage; offer?: RetentionOffer }>> {
+    logger.api('Sending message', { 
+      conversationId: request.conversationId,
+      messageLength: request.message.length 
+    });
+    
+    return this.fetchWithTimeout('/conversations/message', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
   }
 
   /**
    * Accept or reject a retention offer
    */
-  async respondToOffer(request: AcceptOfferRequest): Promise<AcceptOfferResponse> {
-    try {
-      logger.chat('Responding to offer', { 
-        conversationId: request.conversationId,
-        accepted: request.accepted 
-      });
-
-      const response = await this.client.post<ApiResponse<AcceptOfferResponse>>(
-        '/chat/offer-response',
-        request
-      );
-
-      if (!response.data.success) {
-        throw new Error(response.data.error?.message || 'Failed to process offer response');
-      }
-
-      logger.chat('Offer response processed', {
-        conversationId: request.conversationId,
-        outcome: response.data.data?.outcome
-      });
-
-      return response.data.data!;
-    } catch (error) {
-      logger.error('Failed to process offer response', error, { 
-        conversationId: request.conversationId 
-      });
-      throw error;
-    }
+  async handleOfferAction(request: OfferActionRequest): Promise<ApiResponse<{ outcome: ConversationOutcome }>> {
+    logger.api('Handling offer action', { 
+      conversationId: request.conversationId,
+      action: request.action 
+    });
+    
+    return this.fetchWithTimeout('/conversations/offer-action', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
   }
 
   /**
-   * Health check endpoint to verify backend connectivity
+   * Get conversation history
    */
-  async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    try {
-      const response = await this.client.get('/health');
-      return response.data;
-    } catch (error) {
-      logger.error('Health check failed', error);
-      throw new Error('Backend service is not available');
-    }
+  async getConversation(conversationId: string): Promise<ApiResponse<Conversation>> {
+    logger.api('Fetching conversation', { conversationId });
+    
+    return this.fetchWithTimeout<Conversation>(`/conversations/${conversationId}`);
   }
 
   /**
-   * Get the current API base URL (useful for debugging)
+   * Health check endpoint
    */
-  getBaseURL(): string {
-    return this.baseURL;
+  async healthCheck(): Promise<ApiResponse<{ status: string; timestamp: string }>> {
+    return this.fetchWithTimeout('/health');
+  }
+
+  /**
+   * Get user's conversation history
+   */
+  async getUserConversations(userId: string): Promise<ApiResponse<Conversation[]>> {
+    logger.api('Fetching user conversations', { userId });
+    
+    return this.fetchWithTimeout<Conversation[]>(`/users/${userId}/conversations`);
   }
 }
 
-// Create and export a singleton instance
-export const apiService = new ApiService();
+// Mock API service for development/demo
+class MockApiService {
+  private conversations: Map<string, Conversation> = new Map();
+  private messageIdCounter = 1;
 
-// Export individual methods for easier importing
-export const initiateChat = apiService.initiateChat.bind(apiService);
-export const sendMessage = apiService.sendMessage.bind(apiService);
-export const respondToOffer = apiService.respondToOffer.bind(apiService);
-export const healthCheck = apiService.healthCheck.bind(apiService);
+  private generateId(): string {
+    return Math.random().toString(36).substr(2, 9);
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Initiate a chat conversation (alias for startConversation)
+   */
+  async initiateChat(request: StartConversationRequest): Promise<ApiResponse<Conversation>> {
+    return this.startConversation(request);
+  }
+
+  async startConversation(request: StartConversationRequest): Promise<ApiResponse<Conversation>> {
+    await this.delay(1000); // Simulate network delay
+    
+    const conversationId = this.generateId();
+    const conversation: Conversation = {
+      id: conversationId,
+      userId: request.userId,
+      subscriptionId: request.subscriptionId,
+      status: 'active',
+      outcome: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: [
+        {
+          id: (this.messageIdCounter++).toString(),
+          conversationId,
+          content: `I understand you're considering canceling because: ${request.reasonText}. Let me see what I can do to help address your concerns.`,
+          sender: 'ai',
+          timestamp: new Date().toISOString(),
+        }
+      ]
+    };
+
+    this.conversations.set(conversationId, conversation);
+    
+    logger.api('Mock: Started conversation', { conversationId });
+    return { success: true, data: conversation };
+  }
+
+  async sendMessage(request: SendMessageRequest): Promise<ApiResponse<{ message: ChatMessage; offer?: RetentionOffer }>> {
+    await this.delay(1500); // Simulate AI thinking time
+    
+    const conversation = this.conversations.get(request.conversationId);
+    if (!conversation) {
+      return { success: false, error: 'Conversation not found' };
+    }
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: (this.messageIdCounter++).toString(),
+      conversationId: request.conversationId,
+      content: request.message,
+      sender: 'user',
+      timestamp: new Date().toISOString(),
+    };
+    conversation.messages.push(userMessage);
+
+    // Generate AI response
+    const aiResponses = [
+      "I completely understand your concern. Let me see what special offers I can provide for you.",
+      "That's a valid point. I'd like to offer you something that might change your mind.",
+      "I hear you, and I want to make sure we find a solution that works for you.",
+      "Thank you for explaining that. I have a special offer that might address your concerns."
+    ];
+
+    const aiMessage: ChatMessage = {
+      id: (this.messageIdCounter++).toString(),
+      conversationId: request.conversationId,
+      content: aiResponses[Math.floor(Math.random() * aiResponses.length)],
+      sender: 'ai',
+      timestamp: new Date().toISOString(),
+    };
+    conversation.messages.push(aiMessage);
+
+    // Sometimes generate an offer
+    let offer: RetentionOffer | undefined;
+    if (conversation.messages.length >= 4 && Math.random() > 0.3) {
+      offer = {
+        id: this.generateId(),
+        conversationId: request.conversationId,
+        type: Math.random() > 0.5 ? 'discount' : 'pause',
+        title: Math.random() > 0.5 ? '50% Off for 3 Months' : 'Pause Your Subscription',
+        description: Math.random() > 0.5 
+          ? 'Get 50% off your subscription for the next 3 months, then continue at the regular price.'
+          : 'Pause your subscription for up to 3 months and resume whenever you\'re ready.',
+        savings: {
+          monthly: Math.floor(Math.random() * 20) + 10,
+          total: Math.floor(Math.random() * 100) + 50,
+        },
+        details: {
+          originalPrice: 29.99,
+          newPrice: Math.random() > 0.5 ? 14.99 : undefined,
+          freeMonths: Math.random() > 0.7 ? 1 : undefined,
+          pauseDuration: Math.random() > 0.5 ? 3 : undefined,
+        },
+        terms: [
+          'Offer valid for new customers only',
+          'Cannot be combined with other offers',
+          'Subscription will auto-renew at regular price'
+        ],
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    conversation.updatedAt = new Date().toISOString();
+    this.conversations.set(request.conversationId, conversation);
+
+    logger.api('Mock: Sent message', { 
+      conversationId: request.conversationId,
+      hasOffer: !!offer 
+    });
+
+    return { 
+      success: true, 
+      data: { message: aiMessage, offer } 
+    };
+  }
+
+  async handleOfferAction(request: OfferActionRequest): Promise<ApiResponse<{ outcome: ConversationOutcome }>> {
+    await this.delay(800);
+    
+    const conversation = this.conversations.get(request.conversationId);
+    if (!conversation) {
+      return { success: false, error: 'Conversation not found' };
+    }
+
+    const outcome: ConversationOutcome = request.action === 'accept' ? 'accepted' : 'rejected';
+    conversation.outcome = outcome;
+    conversation.status = 'completed';
+    conversation.updatedAt = new Date().toISOString();
+
+    // Add final message
+    const finalMessage: ChatMessage = {
+      id: (this.messageIdCounter++).toString(),
+      conversationId: request.conversationId,
+      content: request.action === 'accept' 
+        ? 'Wonderful! Your new plan is now active. Thank you for staying with us!'
+        : 'I understand. Your cancellation will be processed. We\'re sorry to see you go.',
+      sender: 'ai',
+      timestamp: new Date().toISOString(),
+    };
+    conversation.messages.push(finalMessage);
+
+    this.conversations.set(request.conversationId, conversation);
+
+    logger.api('Mock: Handled offer action', { 
+      conversationId: request.conversationId,
+      action: request.action,
+      outcome 
+    });
+
+    return { success: true, data: { outcome } };
+  }
+
+  async getConversation(conversationId: string): Promise<ApiResponse<Conversation>> {
+    await this.delay(300);
+    
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      return { success: false, error: 'Conversation not found' };
+    }
+
+    return { success: true, data: conversation };
+  }
+
+  async healthCheck(): Promise<ApiResponse<{ status: string; timestamp: string }>> {
+    return { 
+      success: true, 
+      data: { 
+        status: 'ok', 
+        timestamp: new Date().toISOString() 
+      } 
+    };
+  }
+
+  async getUserConversations(userId: string): Promise<ApiResponse<Conversation[]>> {
+    await this.delay(500);
+    
+    const userConversations = Array.from(this.conversations.values())
+      .filter(conv => conv.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return { success: true, data: userConversations };
+  }
+}
+
+// Create singleton instances
+export const apiService = new ApiService();
+export const mockApiService = new MockApiService();
+
+// Export the appropriate service based on environment
+export const api = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true' 
+  ? mockApiService 
+  : apiService;
+
+// Default export for backward compatibility
+export default api;

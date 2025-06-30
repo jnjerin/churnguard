@@ -2,6 +2,7 @@
 // CHURNGUARD CONFIRMATION SCREEN COMPONENT
 // ============================================================================
 // Shows the final outcome after a conversation completes
+'use client'
 
 import React from 'react';
 import { motion } from 'framer-motion';
