@@ -3,14 +3,160 @@ org: hersys
 # "service" is the name of this project. This will also be added to your AWS resource names.
 service: churnguard-api
 
+# provider:
+#   name: aws
+#   runtime: python3.12
+
+# functions:
+#   hello:
+#     handler: handler.hello
+#     events:
+#       - httpApi:
+#           path: /
+#           method: get
+
+
 provider:
   name: aws
   runtime: python3.12
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  
+  # Environment variables for all functions
+  environment:
+    DYNAMODB_TABLE_CONVERSATIONS: ${self:service}-conversations-${self:provider.stage}
+    DYNAMODB_TABLE_MESSAGES: ${self:service}-messages-${self:provider.stage}
+    DYNAMODB_TABLE_OFFERS: ${self:service}-offers-${self:provider.stage}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    
+  # IAM permissions
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_CONVERSATIONS}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_MESSAGES}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_OFFERS}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_CONVERSATIONS}/index/*"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_MESSAGES}/index/*"
 
+# Lambda Functions
 functions:
-  hello:
-    handler: handler.hello
+  startConversation:
+    handler: functions/start_conversation.handler
     events:
-      - httpApi:
-          path: /
+      - http:
+          path: conversations/start
+          method: post
+          cors: true
+          
+  sendMessage:
+    handler: functions/send_message.handler
+    events:
+      - http:
+          path: conversations/message
+          method: post
+          cors: true
+          
+  handleOffer:
+    handler: functions/handle_offer.handler
+    events:
+      - http:
+          path: conversations/offer-action
+          method: post
+          cors: true
+          
+  getConversation:
+    handler: functions/get_conversation.handler
+    events:
+      - http:
+          path: conversations/{id}
           method: get
+          cors: true
+
+# DynamoDB Tables
+resources:
+  Resources:
+    ConversationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_CONVERSATIONS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserIdIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+              
+    MessagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_MESSAGES}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: conversationId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: ConversationIdIndex
+            KeySchema:
+              - AttributeName: conversationId
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+              
+    OffersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_OFFERS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: conversationId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: ConversationIdIndex
+            KeySchema:
+              - AttributeName: conversationId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+# Plugins
+plugins:
+  - serverless-python-requirements
+
+# Custom configuration
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux
