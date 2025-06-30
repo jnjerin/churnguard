@@ -1,12 +1,13 @@
 {
-  "name": "backend",
+  "name": "churnguard-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "ChurnGuard API Backend",
+  "main": "handler.py",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deploy": "serverless deploy",
+    "remove": "serverless remove"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "devDependencies": {
+    "serverless-python-requirements": "^6.0.0"
+  }
 }
