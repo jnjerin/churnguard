@@ -50,15 +50,6 @@ provider:
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_MESSAGES}/index/*"
 
 
-# Placeholder Lambda Function before we set up the real functions
-functions:
-  hello:
-    handler: handler.hello
-    events:
-      - httpApi:
-          path: /hello
-          method: get
-
 # Lambda Functions - Using httpApi for all (consistent with v4)
 functions:
   startConversation:
@@ -160,8 +151,8 @@ resources:
               ProjectionType: ALL
 
 # Plugins
-plugins:
-  - serverless-python-requirements
+# plugins:
+#   - serverless-python-requirements
 
 # Custom configuration
 custom:
