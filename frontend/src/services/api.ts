@@ -14,7 +14,7 @@ import {
 import { logger } from '@/utils/logger';
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const API_TIMEOUT = 30000; // 30 seconds
 
 interface ApiResponse<T = any> {

@@ -1,0 +1,1970 @@
+{
+  "C:\\Users\\HP\\Technical Projects\\hackathons\\churnguard\\backend\\serverless.yml": {
+    "versionFramework": "4.17.1",
+    "servicePath": "C:\\Users\\HP\\Technical Projects\\hackathons\\churnguard\\backend\\serverless.yml",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "org": "hersys",
+      "service": "churnguard-api",
+      "provider": {
+        "name": "aws",
+        "runtime": "python3.12",
+        "region": "us-east-1",
+        "stage": "dev",
+        "environment": {
+          "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+          "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+          "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+          "OPENAI_API_KEY": "<REDACTED>"
+        },
+        "iam": {
+          "role": {
+            "statements": [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "dynamodb:DescribeTable",
+                  "dynamodb:Query",
+                  "dynamodb:Scan",
+                  "dynamodb:GetItem",
+                  "dynamodb:PutItem",
+                  "dynamodb:UpdateItem",
+                  "dynamodb:DeleteItem"
+                ],
+                "Resource": [
+                  "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-conversations-dev",
+                  "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-messages-dev",
+                  "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-offers-dev",
+                  "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-conversations-dev/index/*",
+                  "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-messages-dev/index/*"
+                ]
+              }
+            ]
+          }
+        },
+        "versionFunctions": true,
+        "compiledCloudFormationTemplate": {
+          "AWSTemplateFormatVersion": "2010-09-09",
+          "Description": "The AWS CloudFormation template for this Serverless application",
+          "Resources": {
+            "StartConversationLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/churnguard-api-dev-startConversation"
+              }
+            },
+            "SendMessageLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/churnguard-api-dev-sendMessage"
+              }
+            },
+            "HandleOfferLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/churnguard-api-dev-handleOffer"
+              }
+            },
+            "GetConversationLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/churnguard-api-dev-getConversation"
+              }
+            },
+            "IamRoleLambdaExecution": {
+              "Type": "AWS::IAM::Role",
+              "Properties": {
+                "AssumeRolePolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": [
+                          "lambda.amazonaws.com"
+                        ]
+                      },
+                      "Action": [
+                        "sts:AssumeRole"
+                      ]
+                    }
+                  ]
+                },
+                "Policies": [
+                  {
+                    "PolicyName": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          "churnguard-api",
+                          "dev",
+                          "lambda"
+                        ]
+                      ]
+                    },
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogStream",
+                            "logs:CreateLogGroup",
+                            "logs:TagResource"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/churnguard-api-dev*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:PutLogEvents"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/churnguard-api-dev*:*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "dynamodb:DescribeTable",
+                            "dynamodb:Query",
+                            "dynamodb:Scan",
+                            "dynamodb:GetItem",
+                            "dynamodb:PutItem",
+                            "dynamodb:UpdateItem",
+                            "dynamodb:DeleteItem"
+                          ],
+                          "Resource": [
+                            "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-conversations-dev",
+                            "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-messages-dev",
+                            "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-offers-dev",
+                            "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-conversations-dev/index/*",
+                            "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-messages-dev/index/*"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Path": "/",
+                "RoleName": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      "churnguard-api",
+                      "dev",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "lambdaRole"
+                    ]
+                  ]
+                }
+              }
+            },
+            "StartConversationLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+                  "S3Key": "serverless/churnguard-api/dev/1751324019589-2025-06-30T22:53:39.589Z/churnguard-api.zip"
+                },
+                "Handler": "functions/start_conversation.handler",
+                "Runtime": "python3.12",
+                "FunctionName": "churnguard-api-dev-startConversation",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Environment": {
+                  "Variables": {
+                    "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+                    "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+                    "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+                    "OPENAI_API_KEY": "<REDACTED>"
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "StartConversationLogGroup"
+              ]
+            },
+            "SendMessageLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+                  "S3Key": "serverless/churnguard-api/dev/1751324019589-2025-06-30T22:53:39.589Z/churnguard-api.zip"
+                },
+                "Handler": "functions/send_message.handler",
+                "Runtime": "python3.12",
+                "FunctionName": "churnguard-api-dev-sendMessage",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Environment": {
+                  "Variables": {
+                    "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+                    "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+                    "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+                    "OPENAI_API_KEY": "<REDACTED>"
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "SendMessageLogGroup"
+              ]
+            },
+            "HandleOfferLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+                  "S3Key": "serverless/churnguard-api/dev/1751324019589-2025-06-30T22:53:39.589Z/churnguard-api.zip"
+                },
+                "Handler": "functions/handle_offer.handler",
+                "Runtime": "python3.12",
+                "FunctionName": "churnguard-api-dev-handleOffer",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Environment": {
+                  "Variables": {
+                    "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+                    "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+                    "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+                    "OPENAI_API_KEY": "<REDACTED>"
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "HandleOfferLogGroup"
+              ]
+            },
+            "GetConversationLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+                  "S3Key": "serverless/churnguard-api/dev/1751324019589-2025-06-30T22:53:39.589Z/churnguard-api.zip"
+                },
+                "Handler": "functions/get_conversation.handler",
+                "Runtime": "python3.12",
+                "FunctionName": "churnguard-api-dev-getConversation",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Environment": {
+                  "Variables": {
+                    "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+                    "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+                    "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+                    "OPENAI_API_KEY": "<REDACTED>"
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "GetConversationLogGroup"
+              ]
+            },
+            "StartConversationLambdaVersionjkd7HeRSDVhbxxoFYGJIK348bMXnlqPqowSpjfSvRc": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "StartConversationLambdaFunction"
+                },
+                "CodeSha256": "THHSOILSeoOEoO9xoR1y2wiSa24eEx3RcCIPceKfS50="
+              }
+            },
+            "SendMessageLambdaVersionNvl6OzUNXGIa5xydnr0siHoAYsLFxQKsH4bE9gu19bY": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "SendMessageLambdaFunction"
+                },
+                "CodeSha256": "THHSOILSeoOEoO9xoR1y2wiSa24eEx3RcCIPceKfS50="
+              }
+            },
+            "HandleOfferLambdaVersionFcB7qfpQ135XTgG81TpcBEt10bMk6m2uKIU9VkA5Bc": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "HandleOfferLambdaFunction"
+                },
+                "CodeSha256": "THHSOILSeoOEoO9xoR1y2wiSa24eEx3RcCIPceKfS50="
+              }
+            },
+            "GetConversationLambdaVersionckPSabuQHdArpLp7To6p99mgUxyqWd5kQkKd7Mw3CQ": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "GetConversationLambdaFunction"
+                },
+                "CodeSha256": "THHSOILSeoOEoO9xoR1y2wiSa24eEx3RcCIPceKfS50="
+              }
+            },
+            "HttpApi": {
+              "Type": "AWS::ApiGatewayV2::Api",
+              "Properties": {
+                "Name": "dev-churnguard-api",
+                "ProtocolType": "HTTP"
+              }
+            },
+            "HttpApiStage": {
+              "Type": "AWS::ApiGatewayV2::Stage",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "StageName": "$default",
+                "AutoDeploy": true,
+                "DefaultRouteSettings": {
+                  "DetailedMetricsEnabled": false
+                }
+              }
+            },
+            "StartConversationLambdaPermissionHttpApi": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "StartConversationLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "HttpApi"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "HttpApiIntegrationStartConversation": {
+              "Type": "AWS::ApiGatewayV2::Integration",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "IntegrationType": "AWS_PROXY",
+                "IntegrationUri": {
+                  "Fn::GetAtt": [
+                    "StartConversationLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "PayloadFormatVersion": "2.0",
+                "TimeoutInMillis": 30000
+              }
+            },
+            "HttpApiRoutePostconversationsStart": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "POST conversations/start",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationStartConversation"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationStartConversation"
+            },
+            "SendMessageLambdaPermissionHttpApi": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "SendMessageLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "HttpApi"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "HttpApiIntegrationSendMessage": {
+              "Type": "AWS::ApiGatewayV2::Integration",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "IntegrationType": "AWS_PROXY",
+                "IntegrationUri": {
+                  "Fn::GetAtt": [
+                    "SendMessageLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "PayloadFormatVersion": "2.0",
+                "TimeoutInMillis": 30000
+              }
+            },
+            "HttpApiRoutePostconversationsMessage": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "POST conversations/message",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationSendMessage"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationSendMessage"
+            },
+            "HandleOfferLambdaPermissionHttpApi": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "HandleOfferLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "HttpApi"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "HttpApiIntegrationHandleOffer": {
+              "Type": "AWS::ApiGatewayV2::Integration",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "IntegrationType": "AWS_PROXY",
+                "IntegrationUri": {
+                  "Fn::GetAtt": [
+                    "HandleOfferLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "PayloadFormatVersion": "2.0",
+                "TimeoutInMillis": 30000
+              }
+            },
+            "HttpApiRoutePostconversationsOfferDashaction": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "POST conversations/offer-action",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationHandleOffer"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationHandleOffer"
+            },
+            "GetConversationLambdaPermissionHttpApi": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "GetConversationLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "HttpApi"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "HttpApiIntegrationGetConversation": {
+              "Type": "AWS::ApiGatewayV2::Integration",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "IntegrationType": "AWS_PROXY",
+                "IntegrationUri": {
+                  "Fn::GetAtt": [
+                    "GetConversationLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "PayloadFormatVersion": "2.0",
+                "TimeoutInMillis": 30000
+              }
+            },
+            "HttpApiRouteGetconversationsIdVar": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "GET conversations/{id}",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationGetConversation"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationGetConversation"
+            },
+            "ConversationsTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "churnguard-api-conversations-dev",
+                "BillingMode": "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "id",
+                    "AttributeType": "S"
+                  },
+                  {
+                    "AttributeName": "userId",
+                    "AttributeType": "S"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "id",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "GlobalSecondaryIndexes": [
+                  {
+                    "IndexName": "UserIdIndex",
+                    "KeySchema": [
+                      {
+                        "AttributeName": "userId",
+                        "KeyType": "HASH"
+                      }
+                    ],
+                    "Projection": {
+                      "ProjectionType": "ALL"
+                    }
+                  }
+                ]
+              }
+            },
+            "MessagesTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "churnguard-api-messages-dev",
+                "BillingMode": "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "id",
+                    "AttributeType": "S"
+                  },
+                  {
+                    "AttributeName": "conversationId",
+                    "AttributeType": "S"
+                  },
+                  {
+                    "AttributeName": "timestamp",
+                    "AttributeType": "S"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "id",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "GlobalSecondaryIndexes": [
+                  {
+                    "IndexName": "ConversationIdIndex",
+                    "KeySchema": [
+                      {
+                        "AttributeName": "conversationId",
+                        "KeyType": "HASH"
+                      },
+                      {
+                        "AttributeName": "timestamp",
+                        "KeyType": "RANGE"
+                      }
+                    ],
+                    "Projection": {
+                      "ProjectionType": "ALL"
+                    }
+                  }
+                ]
+              }
+            },
+            "OffersTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "churnguard-api-offers-dev",
+                "BillingMode": "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "id",
+                    "AttributeType": "S"
+                  },
+                  {
+                    "AttributeName": "conversationId",
+                    "AttributeType": "S"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "id",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "GlobalSecondaryIndexes": [
+                  {
+                    "IndexName": "ConversationIdIndex",
+                    "KeySchema": [
+                      {
+                        "AttributeName": "conversationId",
+                        "KeyType": "HASH"
+                      }
+                    ],
+                    "Projection": {
+                      "ProjectionType": "ALL"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "Outputs": {
+            "ServerlessDeploymentBucketName": {
+              "Value": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+              "Export": {
+                "Name": "sls-churnguard-api-dev-ServerlessDeploymentBucketName"
+              }
+            },
+            "StartConversationLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "StartConversationLambdaVersionjkd7HeRSDVhbxxoFYGJIK348bMXnlqPqowSpjfSvRc"
+              },
+              "Export": {
+                "Name": "sls-churnguard-api-dev-StartConversationLambdaFunctionQualifiedArn"
+              }
+            },
+            "SendMessageLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "SendMessageLambdaVersionNvl6OzUNXGIa5xydnr0siHoAYsLFxQKsH4bE9gu19bY"
+              },
+              "Export": {
+                "Name": "sls-churnguard-api-dev-SendMessageLambdaFunctionQualifiedArn"
+              }
+            },
+            "HandleOfferLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "HandleOfferLambdaVersionFcB7qfpQ135XTgG81TpcBEt10bMk6m2uKIU9VkA5Bc"
+              },
+              "Export": {
+                "Name": "sls-churnguard-api-dev-HandleOfferLambdaFunctionQualifiedArn"
+              }
+            },
+            "GetConversationLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "GetConversationLambdaVersionckPSabuQHdArpLp7To6p99mgUxyqWd5kQkKd7Mw3CQ"
+              },
+              "Export": {
+                "Name": "sls-churnguard-api-dev-GetConversationLambdaFunctionQualifiedArn"
+              }
+            },
+            "HttpApiId": {
+              "Description": "Id of the HTTP API",
+              "Value": {
+                "Ref": "HttpApi"
+              },
+              "Export": {
+                "Name": "sls-churnguard-api-dev-HttpApiId"
+              }
+            },
+            "HttpApiUrl": {
+              "Description": "URL of the HTTP API",
+              "Value": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "https://",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    ".execute-api.",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ".",
+                    {
+                      "Ref": "AWS::URLSuffix"
+                    }
+                  ]
+                ]
+              },
+              "Export": {
+                "Name": "sls-churnguard-api-dev-HttpApiUrl"
+              }
+            }
+          }
+        },
+        "vpc": {}
+      },
+      "functions": {
+        "startConversation": {
+          "handler": "functions/start_conversation.handler",
+          "events": [
+            {
+              "httpApi": {
+                "path": "conversations/start",
+                "method": "post"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "conversations/start"
+            }
+          ],
+          "name": "churnguard-api-dev-startConversation",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "python3.12",
+          "vpc": {},
+          "versionLogicalId": "StartConversationLambdaVersionjkd7HeRSDVhbxxoFYGJIK348bMXnlqPqowSpjfSvRc"
+        },
+        "sendMessage": {
+          "handler": "functions/send_message.handler",
+          "events": [
+            {
+              "httpApi": {
+                "path": "conversations/message",
+                "method": "post"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "conversations/message"
+            }
+          ],
+          "name": "churnguard-api-dev-sendMessage",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "python3.12",
+          "vpc": {},
+          "versionLogicalId": "SendMessageLambdaVersionNvl6OzUNXGIa5xydnr0siHoAYsLFxQKsH4bE9gu19bY"
+        },
+        "handleOffer": {
+          "handler": "functions/handle_offer.handler",
+          "events": [
+            {
+              "httpApi": {
+                "path": "conversations/offer-action",
+                "method": "post"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "conversations/offer-action"
+            }
+          ],
+          "name": "churnguard-api-dev-handleOffer",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "python3.12",
+          "vpc": {},
+          "versionLogicalId": "HandleOfferLambdaVersionFcB7qfpQ135XTgG81TpcBEt10bMk6m2uKIU9VkA5Bc"
+        },
+        "getConversation": {
+          "handler": "functions/get_conversation.handler",
+          "events": [
+            {
+              "httpApi": {
+                "path": "conversations/{id}",
+                "method": "get"
+              },
+              "resolvedMethod": "GET",
+              "resolvedPath": "conversations/{id}"
+            }
+          ],
+          "name": "churnguard-api-dev-getConversation",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "python3.12",
+          "vpc": {},
+          "versionLogicalId": "GetConversationLambdaVersionckPSabuQHdArpLp7To6p99mgUxyqWd5kQkKd7Mw3CQ"
+        }
+      },
+      "resources": {
+        "Resources": {
+          "ConversationsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "churnguard-api-conversations-dev",
+              "BillingMode": "PAY_PER_REQUEST",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "userId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "UserIdIndex",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "userId",
+                      "KeyType": "HASH"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ]
+            }
+          },
+          "MessagesTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "churnguard-api-messages-dev",
+              "BillingMode": "PAY_PER_REQUEST",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "conversationId",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "timestamp",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "ConversationIdIndex",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "conversationId",
+                      "KeyType": "HASH"
+                    },
+                    {
+                      "AttributeName": "timestamp",
+                      "KeyType": "RANGE"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ]
+            }
+          },
+          "OffersTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "churnguard-api-offers-dev",
+              "BillingMode": "PAY_PER_REQUEST",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "conversationId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "ConversationIdIndex",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "conversationId",
+                      "KeyType": "HASH"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "Outputs": {}
+      },
+      "custom": {
+        "pythonRequirements": {
+          "dockerizePip": "non-linux"
+        }
+      }
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "python3.12",
+      "region": "us-east-1",
+      "stage": "dev",
+      "environment": {
+        "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+        "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+        "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+        "OPENAI_API_KEY": "<REDACTED>"
+      },
+      "iam": {
+        "role": {
+          "statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:DescribeTable",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem"
+              ],
+              "Resource": [
+                "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-conversations-dev",
+                "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-messages-dev",
+                "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-offers-dev",
+                "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-conversations-dev/index/*",
+                "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-messages-dev/index/*"
+              ]
+            }
+          ]
+        }
+      },
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "StartConversationLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/churnguard-api-dev-startConversation"
+            }
+          },
+          "SendMessageLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/churnguard-api-dev-sendMessage"
+            }
+          },
+          "HandleOfferLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/churnguard-api-dev-handleOffer"
+            }
+          },
+          "GetConversationLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/churnguard-api-dev-getConversation"
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "churnguard-api",
+                        "dev",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:TagResource"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/churnguard-api-dev*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/churnguard-api-dev*:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "dynamodb:DescribeTable",
+                          "dynamodb:Query",
+                          "dynamodb:Scan",
+                          "dynamodb:GetItem",
+                          "dynamodb:PutItem",
+                          "dynamodb:UpdateItem",
+                          "dynamodb:DeleteItem"
+                        ],
+                        "Resource": [
+                          "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-conversations-dev",
+                          "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-messages-dev",
+                          "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-offers-dev",
+                          "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-conversations-dev/index/*",
+                          "arn:aws:dynamodb:us-east-1:*:table/churnguard-api-messages-dev/index/*"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "churnguard-api",
+                    "dev",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "StartConversationLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+                "S3Key": "serverless/churnguard-api/dev/1751324019589-2025-06-30T22:53:39.589Z/churnguard-api.zip"
+              },
+              "Handler": "functions/start_conversation.handler",
+              "Runtime": "python3.12",
+              "FunctionName": "churnguard-api-dev-startConversation",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+                  "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+                  "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+                  "OPENAI_API_KEY": "<REDACTED>"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "StartConversationLogGroup"
+            ]
+          },
+          "SendMessageLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+                "S3Key": "serverless/churnguard-api/dev/1751324019589-2025-06-30T22:53:39.589Z/churnguard-api.zip"
+              },
+              "Handler": "functions/send_message.handler",
+              "Runtime": "python3.12",
+              "FunctionName": "churnguard-api-dev-sendMessage",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+                  "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+                  "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+                  "OPENAI_API_KEY": "<REDACTED>"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "SendMessageLogGroup"
+            ]
+          },
+          "HandleOfferLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+                "S3Key": "serverless/churnguard-api/dev/1751324019589-2025-06-30T22:53:39.589Z/churnguard-api.zip"
+              },
+              "Handler": "functions/handle_offer.handler",
+              "Runtime": "python3.12",
+              "FunctionName": "churnguard-api-dev-handleOffer",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+                  "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+                  "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+                  "OPENAI_API_KEY": "<REDACTED>"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "HandleOfferLogGroup"
+            ]
+          },
+          "GetConversationLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+                "S3Key": "serverless/churnguard-api/dev/1751324019589-2025-06-30T22:53:39.589Z/churnguard-api.zip"
+              },
+              "Handler": "functions/get_conversation.handler",
+              "Runtime": "python3.12",
+              "FunctionName": "churnguard-api-dev-getConversation",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DYNAMODB_TABLE_CONVERSATIONS": "churnguard-api-conversations-dev",
+                  "DYNAMODB_TABLE_MESSAGES": "churnguard-api-messages-dev",
+                  "DYNAMODB_TABLE_OFFERS": "churnguard-api-offers-dev",
+                  "OPENAI_API_KEY": "<REDACTED>"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "GetConversationLogGroup"
+            ]
+          },
+          "StartConversationLambdaVersionjkd7HeRSDVhbxxoFYGJIK348bMXnlqPqowSpjfSvRc": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "StartConversationLambdaFunction"
+              },
+              "CodeSha256": "THHSOILSeoOEoO9xoR1y2wiSa24eEx3RcCIPceKfS50="
+            }
+          },
+          "SendMessageLambdaVersionNvl6OzUNXGIa5xydnr0siHoAYsLFxQKsH4bE9gu19bY": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "SendMessageLambdaFunction"
+              },
+              "CodeSha256": "THHSOILSeoOEoO9xoR1y2wiSa24eEx3RcCIPceKfS50="
+            }
+          },
+          "HandleOfferLambdaVersionFcB7qfpQ135XTgG81TpcBEt10bMk6m2uKIU9VkA5Bc": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "HandleOfferLambdaFunction"
+              },
+              "CodeSha256": "THHSOILSeoOEoO9xoR1y2wiSa24eEx3RcCIPceKfS50="
+            }
+          },
+          "GetConversationLambdaVersionckPSabuQHdArpLp7To6p99mgUxyqWd5kQkKd7Mw3CQ": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "GetConversationLambdaFunction"
+              },
+              "CodeSha256": "THHSOILSeoOEoO9xoR1y2wiSa24eEx3RcCIPceKfS50="
+            }
+          },
+          "HttpApi": {
+            "Type": "AWS::ApiGatewayV2::Api",
+            "Properties": {
+              "Name": "dev-churnguard-api",
+              "ProtocolType": "HTTP"
+            }
+          },
+          "HttpApiStage": {
+            "Type": "AWS::ApiGatewayV2::Stage",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "StageName": "$default",
+              "AutoDeploy": true,
+              "DefaultRouteSettings": {
+                "DetailedMetricsEnabled": false
+              }
+            }
+          },
+          "StartConversationLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "StartConversationLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationStartConversation": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "Fn::GetAtt": [
+                  "StartConversationLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRoutePostconversationsStart": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST conversations/start",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationStartConversation"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationStartConversation"
+          },
+          "SendMessageLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "SendMessageLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationSendMessage": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "Fn::GetAtt": [
+                  "SendMessageLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRoutePostconversationsMessage": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST conversations/message",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationSendMessage"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationSendMessage"
+          },
+          "HandleOfferLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "HandleOfferLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationHandleOffer": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "Fn::GetAtt": [
+                  "HandleOfferLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRoutePostconversationsOfferDashaction": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST conversations/offer-action",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationHandleOffer"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationHandleOffer"
+          },
+          "GetConversationLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "GetConversationLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationGetConversation": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "Fn::GetAtt": [
+                  "GetConversationLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRouteGetconversationsIdVar": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "GET conversations/{id}",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationGetConversation"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationGetConversation"
+          },
+          "ConversationsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "churnguard-api-conversations-dev",
+              "BillingMode": "PAY_PER_REQUEST",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "userId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "UserIdIndex",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "userId",
+                      "KeyType": "HASH"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ]
+            }
+          },
+          "MessagesTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "churnguard-api-messages-dev",
+              "BillingMode": "PAY_PER_REQUEST",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "conversationId",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "timestamp",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "ConversationIdIndex",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "conversationId",
+                      "KeyType": "HASH"
+                    },
+                    {
+                      "AttributeName": "timestamp",
+                      "KeyType": "RANGE"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ]
+            }
+          },
+          "OffersTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "churnguard-api-offers-dev",
+              "BillingMode": "PAY_PER_REQUEST",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "conversationId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "ConversationIdIndex",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "conversationId",
+                      "KeyType": "HASH"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+            "Export": {
+              "Name": "sls-churnguard-api-dev-ServerlessDeploymentBucketName"
+            }
+          },
+          "StartConversationLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "StartConversationLambdaVersionjkd7HeRSDVhbxxoFYGJIK348bMXnlqPqowSpjfSvRc"
+            },
+            "Export": {
+              "Name": "sls-churnguard-api-dev-StartConversationLambdaFunctionQualifiedArn"
+            }
+          },
+          "SendMessageLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "SendMessageLambdaVersionNvl6OzUNXGIa5xydnr0siHoAYsLFxQKsH4bE9gu19bY"
+            },
+            "Export": {
+              "Name": "sls-churnguard-api-dev-SendMessageLambdaFunctionQualifiedArn"
+            }
+          },
+          "HandleOfferLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "HandleOfferLambdaVersionFcB7qfpQ135XTgG81TpcBEt10bMk6m2uKIU9VkA5Bc"
+            },
+            "Export": {
+              "Name": "sls-churnguard-api-dev-HandleOfferLambdaFunctionQualifiedArn"
+            }
+          },
+          "GetConversationLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "GetConversationLambdaVersionckPSabuQHdArpLp7To6p99mgUxyqWd5kQkKd7Mw3CQ"
+            },
+            "Export": {
+              "Name": "sls-churnguard-api-dev-GetConversationLambdaFunctionQualifiedArn"
+            }
+          },
+          "HttpApiId": {
+            "Description": "Id of the HTTP API",
+            "Value": {
+              "Ref": "HttpApi"
+            },
+            "Export": {
+              "Name": "sls-churnguard-api-dev-HttpApiId"
+            }
+          },
+          "HttpApiUrl": {
+            "Description": "URL of the HTTP API",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "HttpApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  }
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-churnguard-api-dev-HttpApiUrl"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": false,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "error": {
+      "message": "An error occurred: HttpApiRoutePostconversationsOfferDashaction - Resource handler returned message: \"The provided route key is not formatted properly for HTTP protocol. Format should be \"[HTTP METHOD] /[RESOURCE PATH]\" or \"$default\" (Service: AmazonApiGatewayV2; Status Code: 400; Error Code: BadRequestException; Request ID: 6b5c648b-aa58-49d3-8748-a37e21d62db3; Proxy: null)\" (RequestToken: 78646a7d-47ba-4b35-278d-bb9a5dcdb139, HandlerErrorCode: GeneralServiceException).",
+      "stack": "ServerlessError2: An error occurred: HttpApiRoutePostconversationsOfferDashaction - Resource handler returned message: \"The provided route key is not formatted properly for HTTP protocol. Format should be \"[HTTP METHOD] /[RESOURCE PATH]\" or \"$default\" (Service: AmazonApiGatewayV2; Status Code: 400; Error Code: BadRequestException; Request ID: 6b5c648b-aa58-49d3-8748-a37e21d62db3; Proxy: null)\" (RequestToken: 78646a7d-47ba-4b35-278d-bb9a5dcdb139, HandlerErrorCode: GeneralServiceException).\n    at file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1175:828\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async AwsDeploy.update (file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1175:25279)\n    at async aws:deploy:deploy:updateStack (file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1186:7908)\n    at async PluginManager.runHooks (file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1377:9870)\n    at async PluginManager.invoke (file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1377:10639)\n    at async PluginManager.spawn (file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1377:11000)\n    at async PluginManager.runHooks (file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1377:9870)\n    at async PluginManager.invoke (file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1377:10639)\n    at async PluginManager.run (file:///C:/Users/HP/.serverless/releases/4.17.1/package/dist/sf-core.js:1377:11373)",
+      "code": "AWS_CLOUD_FORMATION_UPDATE_STACK_INTERNAL_API_GATEWAY_V2_ROUTE_CREATE_FAILED"
+    },
+    "serviceRawFile": "# \"org\" ensures this Service is used with the correct Serverless Framework Access Key.\norg: hersys\n# \"service\" is the name of this project. This will also be added to your AWS resource names.\nservice: churnguard-api\n\n# provider:\n#   name: aws\n#   runtime: python3.12\n\n# functions:\n#   hello:\n#     handler: handler.hello\n#     events:\n#       - httpApi:\n#           path: /\n#           method: get\n\n\nprovider:\n  name: aws\n  runtime: python3.12\n  region: us-east-1\n  stage: ${opt:stage, 'dev'}\n  \n  # Environment variables for all functions\n  environment:\n    DYNAMODB_TABLE_CONVERSATIONS: ${self:service}-conversations-${self:provider.stage}\n    DYNAMODB_TABLE_MESSAGES: ${self:service}-messages-${self:provider.stage}\n    DYNAMODB_TABLE_OFFERS: ${self:service}-offers-${self:provider.stage}\n    OPENAI_API_KEY: ${env:OPENAI_API_KEY}\n    \n  # IAM permissions\n  iam:\n    role:\n      statements:\n        - Effect: Allow\n          Action:\n            - dynamodb:DescribeTable\n            - dynamodb:Query\n            - dynamodb:Scan\n            - dynamodb:GetItem\n            - dynamodb:PutItem\n            - dynamodb:UpdateItem\n            - dynamodb:DeleteItem\n          Resource:\n            - \"arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_CONVERSATIONS}\"\n            - \"arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_MESSAGES}\"\n            - \"arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_OFFERS}\"\n            - \"arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_CONVERSATIONS}/index/*\"\n            - \"arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_MESSAGES}/index/*\"\n\n\n# Lambda Functions - Using httpApi for all (consistent with v4)\nfunctions:\n  startConversation:\n    handler: functions/start_conversation.handler\n    events:\n      - httpApi:\n          path: conversations/start\n          method: post\n          \n  sendMessage:\n    handler: functions/send_message.handler\n    events:\n      - httpApi:\n          path: conversations/message\n          method: post\n          \n  handleOffer:\n    handler: functions/handle_offer.handler\n    events:\n      - httpApi:\n          path: conversations/offer-action\n          method: post\n          \n  getConversation:\n    handler: functions/get_conversation.handler\n    events:\n      - httpApi:\n          path: conversations/{id}\n          method: get\n\n# DynamoDB Tables\nresources:\n  Resources:\n    ConversationsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.DYNAMODB_TABLE_CONVERSATIONS}\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - AttributeName: id\n            AttributeType: S\n          - AttributeName: userId\n            AttributeType: S\n        KeySchema:\n          - AttributeName: id\n            KeyType: HASH\n        GlobalSecondaryIndexes:\n          - IndexName: UserIdIndex\n            KeySchema:\n              - AttributeName: userId\n                KeyType: HASH\n            Projection:\n              ProjectionType: ALL\n              \n    MessagesTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.DYNAMODB_TABLE_MESSAGES}\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - AttributeName: id\n            AttributeType: S\n          - AttributeName: conversationId\n            AttributeType: S\n          - AttributeName: timestamp\n            AttributeType: S\n        KeySchema:\n          - AttributeName: id\n            KeyType: HASH\n        GlobalSecondaryIndexes:\n          - IndexName: ConversationIdIndex\n            KeySchema:\n              - AttributeName: conversationId\n                KeyType: HASH\n              - AttributeName: timestamp\n                KeyType: RANGE\n            Projection:\n              ProjectionType: ALL\n              \n    OffersTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.DYNAMODB_TABLE_OFFERS}\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - AttributeName: id\n            AttributeType: S\n          - AttributeName: conversationId\n            AttributeType: S\n        KeySchema:\n          - AttributeName: id\n            KeyType: HASH\n        GlobalSecondaryIndexes:\n          - IndexName: ConversationIdIndex\n            KeySchema:\n              - AttributeName: conversationId\n                KeyType: HASH\n            Projection:\n              ProjectionType: ALL\n\n# Plugins\n# plugins:\n#   - serverless-python-requirements\n\n# Custom configuration\ncustom:\n  pythonRequirements:\n    dockerizePip: non-linux\n\n",
+    "command": [
+      "deploy"
+    ],
+    "options": {},
+    "orgId": "b72c7fd0-32d6-4105-a4d1-befb25432caa",
+    "orgName": "hersys",
+    "userId": "MFxFs6fZWw1BrmD09Y",
+    "userName": "hersys",
+    "serviceProviderAwsAccountId": "514294711228",
+    "serviceProviderAwsCfStackName": "churnguard-api-dev",
+    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:us-east-1:514294711228:stack/churnguard-api-dev/9d363e30-55fd-11f0-a1db-120b2abad785",
+    "serviceProviderAwsCfStackCreated": "2025-06-30T22:00:20.233Z",
+    "serviceProviderAwsCfStackUpdated": null,
+    "serviceProviderAwsCfStackStatus": "CREATE_COMPLETE",
+    "serviceProviderAwsCfStackOutputs": [
+      {
+        "OutputKey": "HelloLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:514294711228:function:churnguard-api-dev-hello:1",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-churnguard-api-dev-HelloLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "HttpApiId",
+        "OutputValue": "hfzcqg8aug",
+        "Description": "Id of the HTTP API",
+        "ExportName": "sls-churnguard-api-dev-HttpApiId"
+      },
+      {
+        "OutputKey": "ServerlessDeploymentBucketName",
+        "OutputValue": "serverless-framework-deployments-us-east-1-9668e9b0-61a4",
+        "ExportName": "sls-churnguard-api-dev-ServerlessDeploymentBucketName"
+      },
+      {
+        "OutputKey": "HttpApiUrl",
+        "OutputValue": "https://hfzcqg8aug.execute-api.us-east-1.amazonaws.com",
+        "Description": "URL of the HTTP API",
+        "ExportName": "sls-churnguard-api-dev-HttpApiUrl"
+      }
+    ]
+  }
+}
