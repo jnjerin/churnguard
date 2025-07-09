@@ -2,7 +2,7 @@ import requests
 import json
 
 # API_BASE = "https://your-api-url.amazonaws.com"
-API_BASE = " "
+API_BASE = 'https://hfzcqg8aug.execute-api.us-east-1.amazonaws.com'
 
 def test_endpoints():
     # Test health check
