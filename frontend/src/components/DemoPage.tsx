@@ -60,7 +60,7 @@ export const DemoPage: React.FC = () => {
   const mockSubscriptionId = `sub_${selectedService.id}_123`;
 
   /**
-   * Handle the cancel button click - this is where ChurnGuard intervenes
+   * Handle the cancel button click - this is where ChurnGuard intervenes to take the customer through the negotiation 
    */
   const handleCancelClick = () => {
     logger.info('User clicked cancel subscription', { 
