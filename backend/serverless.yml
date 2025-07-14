@@ -3,18 +3,6 @@ org: hersys
 # "service" is the name of this project. This will also be added to your AWS resource names.
 service: churnguard-api
 
-# provider:
-#   name: aws
-#   runtime: python3.12
-
-# functions:
-#   hello:
-#     handler: handler.hello
-#     events:
-#       - httpApi:
-#           path: /
-#           method: get
-
 
 provider:
   name: aws
@@ -70,7 +58,7 @@ functions:
     handler: functions/handle_offer.handler
     events:
       - httpApi:
-          path: conversations/offer-action
+          path: conversations/offer
           method: post
           
   getConversation:
